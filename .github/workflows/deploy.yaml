@@ -28,7 +28,7 @@ jobs:
       - name: Set Identity Provider
         uses: "google-github-actions/auth@v2"
         with:
-          workload_identity_provider: "projects/985173054136/locations/global/workloadIdentityPools/github/providers/my-repo"
+          workload_identity_provider: "projects/985173054136/locations/global/workloadIdentityPools/github/providers/my-repo-v2"
  
       - name: Set Project
         uses: google-github-actions/setup-gcloud@v2
