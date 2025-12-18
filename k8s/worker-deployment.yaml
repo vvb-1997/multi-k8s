@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: vvb07/multi-worker
+          image: vvb07/multi-worker-k8s
           env:
             - name: REDIS_HOST
               value: redis-cluster-ip-service

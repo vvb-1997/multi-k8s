@@ -1,0 +1,64 @@
+name: Deploy MultiK8s
+on:
+  push:
+    branches:
+      - main
+
+env:
+  SHA: $(git rev-parse HEAD)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - run: docker build -t vvb07/react-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true vvb07/react-test npm test
+    
+      - name: Set Service Key
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: "${{ secrets.GKE_SA_KEY }}"
+      
+      - name: Set Project
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: "${{ secrets.GKE_PROJECT_ID }}"
+
+      - name: Auth
+        run: gcloud --quiet auth configure-docker
+      
+      - name: Get Credentials
+        uses: google-github-actions/get-gke-credentials@v0
+        with:
+          cluster_name: "${{ secrets.GKE_CLUSTER_NAME }}"
+          location: "${{ secrets.GKE_CLUSTER_LOCATION }}"
+      
+      - name: build
+        run: |-
+          docker build -t vvb07/multi-client:latest -t vvb07/multi-client:${{ env.SHA }} -f ./client/Dockerfile ./client
+          docker build -t vvb07/multi-server:latest -t vvb07/multi-server:${{ env.SHA }} -f ./server/Dockerfile ./server
+          docker build -t vvb07/multi-worker:latest -t vvb07/multi-worker:${{ env.SHA }} -f ./worker/Dockerfile ./worker
+      
+      - name: Push
+        run: |-
+          docker push vvb07/multi-client:latest
+          docker push vvb07/multi-server:latest
+          docker push vvb07/multi-worker:latest
+
+          docker push vvb07/multi-client:${{ env.SHA }}
+          docker push vvb07/multi-server:${{ env.SHA }}
+          docker push vvb07/multi-worker:${{ env.SHA }}
+      
+      - name: Apply
+        run: |-
+          kubectl apply -f k8s
+          kubectl set image deployments/client-deployment server=vvb07/multi-client:${{ env.SHA }}
+          kubectl set image deployments/server-deployment server=vvb07/multi-server:${{ env.SHA }}
+          kubectl set image deployments/worker-deployment server=vvb07/multi-worker:${{ env.SHA }}

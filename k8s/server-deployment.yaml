@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: vvb07/multi-server-v2
+          image: vvb07/multi-server-k8s
           ports: 
             - containerPort: 5000
           env:
